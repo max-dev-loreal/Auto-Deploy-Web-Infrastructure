@@ -14,6 +14,7 @@ data "aws_ami" "amazon_linux_latest" {
     values = ["hvm"]
   }
 }
+data "aws_region" "current" {}
 #DATA SOURCES----------------------------------------------------
 
 
@@ -267,13 +268,26 @@ amazon-linux-extras install nginx1 -y
 systemctl start nginx
 systemctl enable nginx
 echo "<h1>Hello from $(hostname)</h1>" > /usr/share/nginx/html/index.html
+
+amazon-linux-extras install postgresql14 -y
+SECRET=$(aws secretsmanager get-secret-value \
+--secret-id ${aws_secretsmanager_secret.rds_secret.name} \
+--region ${data.aws_region.current.id} \
+--query SecretString \
+--output text)
+
+echo $SECRET > /home/ec2-user/db-credentials.txt
+chown ec2-user:ec2-user /home/ec2-user/db-credentials.txt
 EOF
   )
   tag_specifications {
     resource_type = "instance"
     tags = {
-    Name = "${var.project_name}-${var.environment}-ec2"
+      Name = "${var.project_name}-${var.environment}-ec2"
+    }
   }
+  iam_instance_profile {
+    name = aws_iam_instance_profile.ec2_profile.name
   }
 }
 #LAUNCH TEMPLATE------------------------------------------------
@@ -299,3 +313,87 @@ resource "aws_autoscaling_group" "asg" {
   }
 }
 #ASG------------------------------------------------
+
+#RANDOM PASSWORD-------------------------------------
+resource "random_password" "db_password" {
+  length           = 16
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+#RANDOM PASSWORD-------------------------------------
+
+#DB-SUBNET-GROUP-------------------------------------
+resource "aws_db_subnet_group" "rds" {
+  name       = "rds_subnet_group"
+  subnet_ids = [aws_subnet.private_subnet_1.id, aws_subnet.private_subnet_2.id]
+  tags = {
+    Name = "${var.project_name}-${var.environment}-rds-subnet-group"
+  }
+}
+#DB-SUBNET-GROUP-------------------------------------
+
+#SECRETS-MANAGER-------------------------------------
+resource "aws_secretsmanager_secret" "rds_secret" {
+  name                    = "${var.project_name}_${var.environment}_rds-secret"
+  description             = "RDS master credentials"
+  recovery_window_in_days = 0
+  tags = {
+    Name = "${var.project_name}-${var.environment}-rds-secret"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "rds_secret_version" {
+  secret_id = aws_secretsmanager_secret.rds_secret.arn
+  secret_string = jsonencode({
+    username : var.db_username
+    password : random_password.db_password.result
+    db_name : var.db_name
+  })
+}
+#SECRETS-MANAGER-------------------------------------
+
+#IAM-ROLE-FOR-EC2------------------------------------
+resource "aws_iam_role" "ec2_role" {
+  name = "${var.project_name}-${var.environment}-ec2-role"
+  assume_role_policy = jsonencode({
+    Version   = "2012-10-17"
+    Statement = [{
+    Effect    = "Allow"
+    Principal = { Service = "ec2.amazonaws.com" }
+    Action    = "sts:AssumeRole"
+    }]
+    }
+  )
+}
+resource "aws_iam_role_policy_attachment" "ec2_secrets_policy" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/SecretsManagerReadWrite"
+}
+resource "aws_iam_instance_profile" "ec2_profile" {
+  name = "${var.project_name}-${var.environment}-ec2-profile"
+  role = aws_iam_role.ec2_role.name
+}
+#IAM-ROLE-FOR-EC2------------------------------------
+
+#RDS-------------------------------------------------
+resource "aws_db_instance" "rds" {
+  identifier = lower(replace("${var.project_name}-${var.environment}-rds", "_", "-"))
+  engine                  = "postgres"
+  engine_version          = "14"
+  instance_class          = var.db_instance_type
+  allocated_storage       = var.db_allocated_storage
+  db_name                 = var.db_name
+  username                = var.db_username
+  password                = random_password.db_password.result
+  db_subnet_group_name    = aws_db_subnet_group.rds.name
+  vpc_security_group_ids  = [aws_security_group.rds.id]
+  multi_az                = var.multi_az
+  skip_final_snapshot     = true
+  deletion_protection     = false
+  publicly_accessible     = false
+  backup_retention_period = 0
+  tags = {
+    Name = "${var.project_name}-${var.environment}-rds"
+  }
+}
+#RDS----------------------------------------------------

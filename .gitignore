@@ -3,3 +3,12 @@
 *.tfstate.*
 terraform.tfvars
 *.exe
+*.pub
+*.pem
+id_rsa
+id_ede25519
+.ssh/
+*.env
+.env.*
+! .env.example
+config/settings.local.php

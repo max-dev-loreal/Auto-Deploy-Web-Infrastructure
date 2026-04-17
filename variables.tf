@@ -55,3 +55,23 @@ variable "desired_capacity" {
   type    = string
   default = "2"
 }
+variable "db_username" {
+  type    = string
+  default = "myprojectdb"
+}
+variable "db_name" {
+  type    = string
+  default = "dbadmin"
+}
+variable "db_instance_type" {
+  type    = string
+  default = "db.t3.micro"
+}
+variable "db_allocated_storage" {
+  type    = number
+  default = 20
+}
+variable "multi_az" {
+  type    = bool
+  default = false
+}
