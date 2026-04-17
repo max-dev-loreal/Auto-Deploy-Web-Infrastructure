@@ -104,7 +104,7 @@ resource "aws_route_table_association" "public_subnet_1" {
 }
 resource "aws_route_table_association" "public_subnet_2" {
   subnet_id      = aws_subnet.public_subnet_2.id
-  route_table_id = aws_route_table_association.public_subnet_2.id
+  route_table_id = aws_route_table.public.id
 }
 
 #PRIVATE-RT
@@ -125,28 +125,24 @@ resource "aws_route_table_association" "private_subnet_2" {
   route_table_id = aws_route_table.private.id
 }
 
-
 #ROUTE-TABLES----------------------------------------------
 
 #SECURITY-GROUPS-------------------------------------------
 resource "aws_security_group" "ec2" {
   vpc_id = aws_vpc.my_aws_vpc.id
 
-  dynamic "ingress" {
-    for_each = ["80", "443"]
-    content {
-      from_port   = tonumber(ingress.value)
-      to_port     = tonumber(ingress.value)
-      protocol    = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
-    }
-  }
-
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = [var.your_ip]
+  }
+
+  ingress {
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
   }
 
   egress {
@@ -190,34 +186,116 @@ resource "aws_key_pair" "public_key" {
 }
 #KEY-PAIR---------------------------------------------------
 
-#{EC2------------------------------------------------------}
-resource "aws_instance" "ec2" {
-  ami                    = data.aws_ami.amazon_linux_latest.id
+#SG FOR ALB-------------------------------------------------
+resource "aws_security_group" "alb" {
+  vpc_id = aws_vpc.my_aws_vpc.id
+  dynamic "ingress" {
+    for_each = ["80", "443"]
+    content {
+      from_port   = tonumber(ingress.value)
+      to_port     = tonumber(ingress.value)
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = -1
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+#SG FOR ALB----------------------------------------------------
+
+#ALB--------------------------------------------------
+resource "aws_lb" "tg" {
+  name                       = "${var.project_name}-${var.environment}-alb"
+  internal                   = false
+  load_balancer_type         = "application"
+  security_groups            = [aws_security_group.alb.id]
+  subnets                    = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id]
+  enable_deletion_protection = false
+  tags = {
+    Name = "${var.project_name}-${var.environment}-alb"
+  }
+}
+#ALB--------------------------------------------------
+
+
+#TARGET GROUP--------------------------------------------------
+resource "aws_lb_target_group" "tg" {
+  name     = "${var.project_name}-${var.environment}-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.my_aws_vpc.id
+  health_check {
+    enabled             = true
+    path                = "/"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    interval            = 30
+    timeout             = 5
+  }
+}
+#TARGET GROUP--------------------------------------------------
+
+#LISTENER------------------------------------------------------
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.tg.arn
+  port              = 80
+  protocol          = "HTTP"
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.tg.arn
+  }
+}
+#LISTENER-------------------------------------------------------
+
+#LAUNCH TEMPLATE------------------------------------------------
+resource "aws_launch_template" "lt" {
+  name_prefix            = "${var.project_name}-${var.environment}-lt-"
+  image_id               = data.aws_ami.amazon_linux_latest.id
   instance_type          = var.instance_type
-  subnet_id              = aws_subnet.public_subnet_1.id
-  vpc_security_group_ids = [aws_security_group.ec2.id]
   key_name               = aws_key_pair.public_key.key_name
-  user_data              = <<-EOF
+  vpc_security_group_ids = [aws_security_group.ec2.id]
+  user_data = base64encode(<<-EOF
 #!/bin/bash
 yum update -y 
-yum install -y nginx
+amazon-linux-extras install nginx1 -y
 systemctl start nginx
 systemctl enable nginx
 echo "<h1>Hello from $(hostname)</h1>" > /usr/share/nginx/html/index.html
 EOF
-  tags = {
+  )
+  tag_specifications {
+    resource_type = "instance"
+    tags = {
     Name = "${var.project_name}-${var.environment}-ec2"
   }
-}
-#{EC2----------------------------------------------------------}
-
-#EIP
-resource "aws_eip" "eip" {
-  domain     = "vpc"
-  instance   = aws_instance.ec2.id
-  depends_on = [aws_internet_gateway.igw]
-  tags = {
-    Name = "${var.project_name}-${var.environment}-eip"
   }
 }
-#EIP
+#LAUNCH TEMPLATE------------------------------------------------
+
+#ASG------------------------------------------------
+resource "aws_autoscaling_group" "asg" {
+  name                      = "${var.project_name}-${var.environment}-asg"
+  min_size                  = var.min_size
+  max_size                  = var.max_size
+  desired_capacity          = var.desired_capacity
+  vpc_zone_identifier       = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id]
+  target_group_arns         = [aws_lb_target_group.tg.arn]
+  health_check_type         = "ELB"
+  health_check_grace_period = 300
+  launch_template {
+    id      = aws_launch_template.lt.id
+    version = "$Latest"
+  }
+  tag {
+    key                 = "Name"
+    value               = "${var.project_name}-${var.environment}-asg-ec2"
+    propagate_at_launch = true
+  }
+}
+#ASG------------------------------------------------

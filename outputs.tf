@@ -13,15 +13,18 @@ output "private_subnet_1_id" {
 output "private_subnet_2_id" {
   value = aws_subnet.private_subnet_2
 }
-output "ec2_public_ip" {
-  value = aws_eip.eip.public_ip
-}
-output "ec2_instance_id" {
-  value = aws_instance.ec2.id
-}
 output "ec2_sg_id" {
   value = aws_security_group.ec2
 }
 output "rds_sg_id" {
   value = aws_security_group.rds
+}
+output "alb_dns_name" {
+  value = aws_lb.tg.dns_name
+}
+output "alb_arn" {
+  value = aws_lb.tg.arn
+}
+output "asg_name" {
+  value = aws_autoscaling_group.asg.name
 }
