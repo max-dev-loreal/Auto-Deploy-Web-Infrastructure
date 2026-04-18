@@ -1,14 +1,27 @@
-.terraform/
+# Terraform state files
 *.tfstate
-*.tfstate.*
-terraform.tfvars
-*.exe
-*.pub
+*.tfstate.backup
+*.tfstate.*.backup
+
+# Terraform directories
+.terraform/
+
+# Terraform variables (содержат секреты)
+*.tfvars
+*.tfvars.json
+
+# Crash logs
+crash.log
+crash.*.log
+
+# SSH ключи
 *.pem
-id_rsa
-id_ede25519
-.ssh/
-*.env
-.env.*
-! .env.example
-config/settings.local.php
+*.pub
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

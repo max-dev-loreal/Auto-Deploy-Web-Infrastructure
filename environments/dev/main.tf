@@ -1,4 +1,12 @@
 #DATA SOURCES----------------------------------------------------
+data "terraform_remote_state" "global" {
+  backend = "s3"
+  config = {
+    bucket = "maksym-kowalski-projectautodeploy-tfstate"
+    key    = "global/terraform.tfstate"
+    region = "ca-central-1"
+  }
+}
 data "aws_availability_zones" "azs" {
   state = "available"
 }
