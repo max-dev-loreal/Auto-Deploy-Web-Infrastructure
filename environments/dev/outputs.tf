@@ -1,42 +1,51 @@
 output "vpc_id" {
-  value = aws_vpc.my_aws_vpc.id
+  value = module.networking.vpc_id
 }
+
 output "public_subnet_1_id" {
-  value = aws_subnet.public_subnet_1
+  value = module.networking.public_subnet_1_id
 }
+
 output "public_subnet_2_id" {
-  value = aws_subnet.public_subnet_2
+  value = module.networking.public_subnet_2_id
 }
+
 output "private_subnet_1_id" {
-  value = aws_subnet.private_subnet_1
+  value = module.networking.private_subnet_1_id
 }
+
 output "private_subnet_2_id" {
-  value = aws_subnet.private_subnet_2
+  value = module.networking.private_subnet_2_id
 }
-output "ec2_sg_id" {
-  value = aws_security_group.ec2
-}
-output "rds_sg_id" {
-  value = aws_security_group.rds
-}
+
 output "alb_dns_name" {
-  value = aws_lb.tg.dns_name
+  value = module.compute.alb_dns_name
 }
+
 output "alb_arn" {
-  value = aws_lb.tg.arn
+  value = module.compute.alb_arn
 }
+
 output "asg_name" {
-  value = aws_autoscaling_group.asg.name
+  value = module.compute.asg_name
 }
+
+output "ec2_sg_id" {
+  value = module.compute.ec2_sg_id
+}
+
 output "rds_endpoint" {
-  value = aws_db_instance.rds.endpoint
+  value = module.database.rds_endpoint
 }
+
 output "rds_port" {
-  value = aws_db_instance.rds.port
+  value = module.database.rds_port
 }
+
 output "secret_arn" {
-  value = aws_secretsmanager_secret.rds_secret.arn
+  value = module.database.secret_arn
 }
+
 output "db_name" {
-  value = aws_db_instance.rds.db_name
+  value = module.database.db_name
 }
