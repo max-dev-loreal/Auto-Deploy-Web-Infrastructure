@@ -4,7 +4,7 @@ on:
   workflow_dispatch:    # ← только вручную через кнопку на GitHub!
     inputs:
       confirm:
-        description: 'Type DEPLOY for confirm deploy in prod'
+        description: 'Введи DEPLOY чтобы подтвердить деплой в prod'
         required: true
 
 env:
