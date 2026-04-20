@@ -37,7 +37,7 @@ variable "instance_type" {
 variable "your_ip" {
   description = "Enter your ip address for access"
   type        = string
-  default = "109.125.254.114/32"
+  default     = "109.125.254.114/32"
 
   validation {
     condition     = can(regex("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}/32$", var.your_ip))
