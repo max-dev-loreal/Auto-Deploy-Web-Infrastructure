@@ -60,7 +60,7 @@ resource "aws_security_group" "alb" {
 #KEY-PAIR--------------------------------------------------
 resource "aws_key_pair" "public_key" {
   key_name   = "${var.project_name}-${var.environment}-key"
-  public_key = file(var.public_key_path)
+  public_key = file("${path.root}/${var.public_key_path}")
 }
 #KEY-PAIR---------------------------------------------------
 #ALB--------------------------------------------------
@@ -206,3 +206,4 @@ resource "aws_security_group" "rds" {
     Name = "${var.project_name}-${var.environment}-rds-sg"
   }
 }
+#GITHUB EBEANAT

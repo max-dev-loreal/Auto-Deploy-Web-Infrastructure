@@ -16,7 +16,7 @@ crash.*.log
 
 # SSH ключи
 *.pem
-*.pub
+
 
 # OS files
 .DS_Store
