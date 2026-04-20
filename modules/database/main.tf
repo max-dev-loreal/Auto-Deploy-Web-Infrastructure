@@ -44,7 +44,7 @@ resource "aws_db_instance" "rds" {
   username                = var.db_username
   password                = random_password.db_password.result
   db_subnet_group_name    = aws_db_subnet_group.rds.name
-  vpc_security_group_ids = [var.rds_sg_id]
+  vpc_security_group_ids  = [var.rds_sg_id]
   multi_az                = var.multi_az
   skip_final_snapshot     = true
   deletion_protection     = false

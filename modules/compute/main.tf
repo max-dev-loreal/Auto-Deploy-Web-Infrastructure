@@ -69,7 +69,7 @@ resource "aws_lb" "tg" {
   internal                   = false
   load_balancer_type         = "application"
   security_groups            = [aws_security_group.alb.id]
-  subnets = [var.public_subnet_1_id, var.public_subnet_2_id]
+  subnets                    = [var.public_subnet_1_id, var.public_subnet_2_id]
   enable_deletion_protection = false
   tags = {
     Name = "${var.project_name}-${var.environment}-alb"
@@ -148,7 +148,7 @@ resource "aws_autoscaling_group" "asg" {
   min_size                  = var.min_size
   max_size                  = var.max_size
   desired_capacity          = var.desired_capacity
-  vpc_zone_identifier = [var.public_subnet_1_id, var.public_subnet_2_id]
+  vpc_zone_identifier       = [var.public_subnet_1_id, var.public_subnet_2_id]
   target_group_arns         = [aws_lb_target_group.tg.arn]
   health_check_type         = "ELB"
   health_check_grace_period = 300

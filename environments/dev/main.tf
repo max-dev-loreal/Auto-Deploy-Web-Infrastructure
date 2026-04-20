@@ -32,7 +32,7 @@ module "database" {
   multi_az             = var.multi_az
   project_name         = var.project_name
   environment          = var.environment
-  rds_sg_id = module.compute.rds_sg_id
+  rds_sg_id            = module.compute.rds_sg_id
 }
 module "compute" {
   source = "../../modules/compute"
@@ -49,6 +49,6 @@ module "compute" {
   your_ip            = var.your_ip
   secret_arn         = module.database.secret_arn
   public_key_path    = "${path.module}/my-project-key.pub"
-  secret_name = module.database.secret_name
-  region      = var.region
+  secret_name        = module.database.secret_name
+  region             = var.region
 }
